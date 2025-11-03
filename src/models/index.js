@@ -53,6 +53,7 @@ export const ProjectMember = sequelize.define('ProjectMember', {
 // Project Tasks
 export const ProjectTask = sequelize.define('ProjectTask', {
   project_id: { type: DataTypes.INTEGER, allowNull: false },
+  list_id: { type: DataTypes.INTEGER, allowNull: true },
   title: { type: DataTypes.STRING(255), allowNull: false },
   description: { type: DataTypes.TEXT, allowNull: true },
   status: { type: DataTypes.ENUM('todo','in_progress','done'), defaultValue: 'todo', allowNull: false },
@@ -76,6 +77,30 @@ export const TaskComment = sequelize.define('TaskComment', {
   timestamps: false,
 })
 
+// Project Lists (Columns)
+export const ProjectList = sequelize.define('ProjectList', {
+  project_id: { type: DataTypes.INTEGER, allowNull: false },
+  title: { type: DataTypes.STRING(200), allowNull: false },
+  position: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+}, {
+  tableName: 'project_lists',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+})
+
+// Task Attachments
+export const TaskAttachment = sequelize.define('TaskAttachment', {
+  task_id: { type: DataTypes.INTEGER, allowNull: false },
+  file_url: { type: DataTypes.STRING(500), allowNull: false },
+  file_name: { type: DataTypes.STRING(255), allowNull: false },
+  size: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'task_attachments',
+  timestamps: false,
+})
+
 // Associations
 User.hasMany(Todo, { foreignKey: 'user_id' })
 Todo.belongsTo(User, { foreignKey: 'user_id' })
@@ -89,6 +114,12 @@ Project.belongsToMany(User, { through: ProjectMember, foreignKey: 'project_id', 
 Project.hasMany(ProjectTask, { foreignKey: 'project_id' })
 ProjectTask.belongsTo(Project, { foreignKey: 'project_id' })
 
+Project.hasMany(ProjectList, { foreignKey: 'project_id' })
+ProjectList.belongsTo(Project, { foreignKey: 'project_id' })
+
+ProjectList.hasMany(ProjectTask, { foreignKey: 'list_id' })
+ProjectTask.belongsTo(ProjectList, { foreignKey: 'list_id' })
+
 User.hasMany(ProjectTask, { foreignKey: 'assignee_id', as: 'assignedTasks' })
 ProjectTask.belongsTo(User, { foreignKey: 'assignee_id', as: 'assignee' })
 
@@ -97,5 +128,8 @@ TaskComment.belongsTo(ProjectTask, { foreignKey: 'task_id' })
 
 User.hasMany(TaskComment, { foreignKey: 'user_id' })
 TaskComment.belongsTo(User, { foreignKey: 'user_id' })
+
+ProjectTask.hasMany(TaskAttachment, { foreignKey: 'task_id' })
+TaskAttachment.belongsTo(ProjectTask, { foreignKey: 'task_id' })
 
 export default sequelize

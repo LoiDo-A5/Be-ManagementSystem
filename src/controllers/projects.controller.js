@@ -1,4 +1,4 @@
-import { Project, ProjectMember, ProjectTask, User } from '../models/index.js'
+import { Project, ProjectMember, ProjectTask, ProjectList, User } from '../models/index.js'
 
 export async function listMyProjects(req, res, next) {
   try {
@@ -105,11 +105,21 @@ export async function listProjectTasks(req, res, next) {
 export async function createTask(req, res, next) {
   try {
     const project_id = Number(req.params.id)
-    const { title, description, assignee_id, due_date, status } = req.body
+    const { title, description, assignee_id, due_date, status, list_id } = req.body
     if (!project_id) return res.status(400).json({ error: 'Invalid id' })
     if (!title) return res.status(400).json({ error: 'title is required' })
     const ok = await ensureMembership(project_id, req.user.id)
     if (!ok) return res.status(403).json({ error: 'Forbidden' })
+
+    // If list_id provided, ensure it belongs to the same project
+    let listIdVal = list_id ?? null
+    if (listIdVal !== null && listIdVal !== undefined) {
+      const list = await ProjectList.findByPk(Number(listIdVal))
+      if (!list || list.project_id !== project_id) {
+        return res.status(400).json({ error: 'Invalid list_id for this project' })
+      }
+      listIdVal = Number(listIdVal)
+    }
 
     const task = await ProjectTask.create({
       project_id,
@@ -118,6 +128,7 @@ export async function createTask(req, res, next) {
       assignee_id: assignee_id || null,
       due_date: due_date || null,
       status: status || 'todo',
+      list_id: listIdVal,
     })
     res.status(201).json(task.get({ plain: true }))
   } catch (err) {
@@ -134,12 +145,23 @@ export async function updateTask(req, res, next) {
     const ok = await ensureMembership(task.project_id, req.user.id)
     if (!ok) return res.status(403).json({ error: 'Forbidden' })
 
-    const { title, description, assignee_id, due_date, status } = req.body
+    const { title, description, assignee_id, due_date, status, list_id } = req.body
     if (title !== undefined) task.title = title
     if (description !== undefined) task.description = description
     if (assignee_id !== undefined) task.assignee_id = assignee_id
     if (due_date !== undefined) task.due_date = due_date
     if (status !== undefined) task.status = status
+    if (list_id !== undefined) {
+      if (list_id === null) {
+        task.list_id = null
+      } else {
+        const list = await ProjectList.findByPk(Number(list_id))
+        if (!list || list.project_id !== task.project_id) {
+          return res.status(400).json({ error: 'Invalid list_id for this project' })
+        }
+        task.list_id = Number(list_id)
+      }
+    }
     await task.save()
     res.json(task.get({ plain: true }))
   } catch (err) {

@@ -5,6 +5,11 @@ import morgan from 'morgan'
 import authRoutes from './routes/auth.routes.js'
 import todoRoutes from './routes/todos.routes.js'
 import projectRoutes from './routes/projects.routes.js'
+import listRoutes from './routes/lists.routes.js'
+import commentRoutes from './routes/comments.routes.js'
+import attachmentRoutes from './routes/attachments.routes.js'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 const app = express()
 
@@ -13,6 +18,11 @@ app.use(cors())
 app.use(morgan('dev'))
 app.use(express.json())
 
+// Static files for uploads
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
+
 app.get('/', (req, res) => {
   res.json({ message: 'BeToDoList API is running' })
 })
@@ -20,6 +30,9 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/todos', todoRoutes)
 app.use('/api/projects', projectRoutes)
+app.use('/api', listRoutes)
+app.use('/api', commentRoutes)
+app.use('/api', attachmentRoutes)
 
 // Global error handler
 // eslint-disable-next-line no-unused-vars
