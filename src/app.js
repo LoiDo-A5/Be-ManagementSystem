@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import authRoutes from './routes/auth.routes.js'
 import todoRoutes from './routes/todos.routes.js'
+import projectRoutes from './routes/projects.routes.js'
 
 const app = express()
 
@@ -18,6 +19,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRoutes)
 app.use('/api/todos', todoRoutes)
+app.use('/api/projects', projectRoutes)
 
 // Global error handler
 // eslint-disable-next-line no-unused-vars

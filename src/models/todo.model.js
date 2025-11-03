@@ -1,49 +1,45 @@
-import pool from '../config/db.js'
+import { Todo } from './index.js'
 
 export async function findAllByUser (user_id) {
-  const [rows] = await pool.query(
-    'SELECT id, title, description, due_date, completed, created_at, updated_at FROM todos WHERE user_id = ? ORDER BY created_at DESC',
-    [user_id]
-  )
-  return rows
+  const rows = await Todo.findAll({
+    where: { user_id },
+    order: [['created_at', 'DESC']],
+    attributes: ['id', 'title', 'description', 'due_date', 'completed', 'created_at', 'updated_at']
+  })
+  return rows.map(r => r.get({ plain: true }))
 }
 
 export async function create ({ user_id, title, description, due_date, completed }) {
-  const [result] = await pool.query(
-    'INSERT INTO todos (user_id, title, description, due_date, completed) VALUES (?, ?, ?, ?, ?)',
-    [user_id, title, description, due_date, completed]
-  )
-
-  const [rows] = await pool.query('SELECT id, title, description, due_date, completed, created_at, updated_at FROM todos WHERE id = ?', [result.insertId])
-  return rows[0]
+  const created = await Todo.create({ user_id, title, description, due_date, completed: Boolean(completed) })
+  const plain = created.get({ plain: true })
+  return {
+    id: plain.id,
+    title: plain.title,
+    description: plain.description,
+    due_date: plain.due_date,
+    completed: plain.completed,
+    created_at: plain.created_at,
+    updated_at: plain.updated_at
+  }
 }
 
 export async function updateById ({ id, user_id, title, description, due_date, completed }) {
-  // Build dynamic update
-  const fields = []
-  const values = []
+  const fields = {}
+  if (title !== undefined) fields.title = title
+  if (description !== undefined) fields.description = description
+  if (due_date !== undefined) fields.due_date = due_date
+  if (completed !== undefined) fields.completed = Boolean(completed)
 
-  if (title !== undefined) { fields.push('title = ?'); values.push(title) }
-  if (description !== undefined) { fields.push('description = ?'); values.push(description) }
-  if (due_date !== undefined) { fields.push('due_date = ?'); values.push(due_date) }
-  if (completed !== undefined) { fields.push('completed = ?'); values.push(Boolean(completed)) }
+  if (Object.keys(fields).length === 0) return null
 
-  if (fields.length === 0) return null
+  const [affected] = await Todo.update(fields, { where: { id, user_id } })
+  if (!affected) return null
 
-  values.push(id, user_id)
-
-  const [result] = await pool.query(
-    `UPDATE todos SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
-    values
-  )
-
-  if (result.affectedRows === 0) return null
-
-  const [rows] = await pool.query('SELECT id, title, description, due_date, completed, created_at, updated_at FROM todos WHERE id = ?', [id])
-  return rows[0]
+  const updated = await Todo.findByPk(id, { attributes: ['id', 'title', 'description', 'due_date', 'completed', 'created_at', 'updated_at'] })
+  return updated ? updated.get({ plain: true }) : null
 }
 
 export async function removeById ({ id, user_id }) {
-  const [result] = await pool.query('DELETE FROM todos WHERE id = ? AND user_id = ?', [id, user_id])
-  return result.affectedRows > 0
+  const deleted = await Todo.destroy({ where: { id, user_id } })
+  return deleted > 0
 }
