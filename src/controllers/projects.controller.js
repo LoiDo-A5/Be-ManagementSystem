@@ -30,6 +30,18 @@ export async function createProject(req, res, next) {
     const project = await Project.create({ owner_id: userId, name, description: description || null })
     await ProjectMember.create({ project_id: project.id, user_id: userId, role: 'owner' })
 
+    // Seed default lists (columns)
+    try {
+      await ProjectList.bulkCreate([
+        { project_id: project.id, title: 'To Do', position: 0 },
+        { project_id: project.id, title: 'In Progress', position: 1 },
+        { project_id: project.id, title: 'Done', position: 2 },
+      ])
+    } catch (e) {
+      // non-blocking; log and continue
+      console.warn('Failed to seed default lists for project', project.id, e?.message)
+    }
+
     const full = await Project.findByPk(project.id, { include: [{ model: User, as: 'owner', attributes: ['id','name','email'] }] })
     res.status(201).json(full.get({ plain: true }))
   } catch (err) {
@@ -182,4 +194,106 @@ export async function deleteTask(req, res, next) {
   } catch (err) {
     next(err)
   }
+}
+
+// ---------- Members Management ----------
+export async function listMembers(req, res, next) {
+  try {
+    const project_id = Number(req.params.id)
+    if (!project_id) return res.status(400).json({ error: 'Invalid id' })
+    const mem = await ProjectMember.findOne({ where: { project_id, user_id: req.user.id } })
+    if (!mem) return res.status(403).json({ error: 'Forbidden' })
+
+    const rows = await ProjectMember.findAll({
+      where: { project_id },
+      include: [{ model: User, attributes: ['id','name','email'] }],
+      order: [['added_at','ASC']]
+    })
+    const members = rows.map(r => ({ user_id: r.user_id, role: r.role, added_at: r.added_at, user: r.User?.get({ plain: true }) }))
+    res.json(members)
+  } catch (err) { next(err) }
+}
+
+export async function inviteByEmail(req, res, next) {
+  try {
+    const project_id = Number(req.params.id)
+    const { email, role } = req.body
+    if (!project_id || !email) return res.status(400).json({ error: 'project_id and email required' })
+
+    const me = await ProjectMember.findOne({ where: { project_id, user_id: req.user.id } })
+    if (!me || (me.role !== 'owner' && me.role !== 'admin')) return res.status(403).json({ error: 'Forbidden' })
+
+    const user = await User.findOne({ where: { email } })
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    const [member, created] = await ProjectMember.findOrCreate({
+      where: { project_id, user_id: user.id },
+      defaults: { role: role || 'member' }
+    })
+    if (!created && role && member.role !== role) {
+      member.role = role
+      await member.save()
+    }
+    res.status(created ? 201 : 200).json({ user_id: user.id, role: member.role })
+  } catch (err) { next(err) }
+}
+
+export async function changeMemberRole(req, res, next) {
+  try {
+    const project_id = Number(req.params.id)
+    const targetUserId = Number(req.params.userId)
+    const { role } = req.body
+    if (!project_id || !targetUserId || !role) return res.status(400).json({ error: 'project_id, userId and role required' })
+
+    const me = await ProjectMember.findOne({ where: { project_id, user_id: req.user.id } })
+    if (!me || (me.role !== 'owner' && me.role !== 'admin')) return res.status(403).json({ error: 'Forbidden' })
+
+    const member = await ProjectMember.findOne({ where: { project_id, user_id: targetUserId } })
+    if (!member) return res.status(404).json({ error: 'Member not found' })
+
+    member.role = role
+    await member.save()
+    res.json({ user_id: member.user_id, role: member.role })
+  } catch (err) { next(err) }
+}
+
+export async function removeMember(req, res, next) {
+  try {
+    const project_id = Number(req.params.id)
+    const targetUserId = Number(req.params.userId)
+    if (!project_id || !targetUserId) return res.status(400).json({ error: 'Invalid id' })
+
+    const me = await ProjectMember.findOne({ where: { project_id, user_id: req.user.id } })
+    if (!me || (me.role !== 'owner' && me.role !== 'admin')) return res.status(403).json({ error: 'Forbidden' })
+
+    const member = await ProjectMember.findOne({ where: { project_id, user_id: targetUserId } })
+    if (!member) return res.status(404).json({ error: 'Member not found' })
+
+    await ProjectMember.destroy({ where: { project_id, user_id: targetUserId } })
+    res.status(204).send()
+  } catch (err) { next(err) }
+}
+
+export async function leaveProject(req, res, next) {
+  try {
+    const project_id = Number(req.params.id)
+    const user_id = req.user.id
+    if (!project_id) return res.status(400).json({ error: 'Invalid id' })
+
+    const membership = await ProjectMember.findOne({ where: { project_id, user_id } })
+    if (!membership) return res.status(404).json({ error: 'Not a project member' })
+
+    if (membership.role !== 'owner') {
+      await ProjectMember.destroy({ where: { project_id, user_id } })
+      return res.status(204).send()
+    }
+
+    const membersCount = await ProjectMember.count({ where: { project_id } })
+    if (membersCount > 1) {
+      return res.status(400).json({ error: 'Owner must transfer ownership before leaving the project' })
+    }
+
+    await Project.destroy({ where: { id: project_id } })
+    return res.status(204).send()
+  } catch (err) { next(err) }
 }

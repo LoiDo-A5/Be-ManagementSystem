@@ -26,6 +26,12 @@ export async function createList(req, res, next) {
     const ok = await ensureMembership(project_id, req.user.id)
     if (!ok) return res.status(403).json({ error: 'Forbidden' })
 
+    // Prevent duplicates by title within a project (case-insensitive basic check)
+    const existing = await ProjectList.findOne({ where: { project_id, title } })
+    if (existing) {
+      return res.status(200).json(existing.get({ plain: true }))
+    }
+
     // Auto position: max + 1 if not provided
     let pos = position
     if (pos === undefined) {

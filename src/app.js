@@ -8,6 +8,10 @@ import projectRoutes from './routes/projects.routes.js'
 import listRoutes from './routes/lists.routes.js'
 import commentRoutes from './routes/comments.routes.js'
 import attachmentRoutes from './routes/attachments.routes.js'
+import settingsRoutes from './routes/settings.routes.js'
+import labelsRoutes from './routes/labels.routes.js'
+import checklistRoutes from './routes/checklist.routes.js'
+import assigneesRoutes from './routes/assignees.routes.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -33,6 +37,10 @@ app.use('/api/projects', projectRoutes)
 app.use('/api', listRoutes)
 app.use('/api', commentRoutes)
 app.use('/api', attachmentRoutes)
+app.use('/api', settingsRoutes)
+app.use('/api', labelsRoutes)
+app.use('/api', checklistRoutes)
+app.use('/api', assigneesRoutes)
 
 // Global error handler
 // eslint-disable-next-line no-unused-vars
