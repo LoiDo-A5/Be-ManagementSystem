@@ -117,7 +117,7 @@ export async function listProjectTasks(req, res, next) {
 export async function createTask(req, res, next) {
   try {
     const project_id = Number(req.params.id)
-    const { title, description, assignee_id, due_date, status, list_id } = req.body
+    const { title, description, assignee_id, due_date, status, list_id, priority, reminder_at } = req.body
     if (!project_id) return res.status(400).json({ error: 'Invalid id' })
     if (!title) return res.status(400).json({ error: 'title is required' })
     const ok = await ensureMembership(project_id, req.user.id)
@@ -133,6 +133,10 @@ export async function createTask(req, res, next) {
       listIdVal = Number(listIdVal)
     }
 
+    // validate priority if provided
+    const allowedPriority = ['low','medium','high']
+    const priorityVal = priority && allowedPriority.includes(priority) ? priority : undefined
+
     const task = await ProjectTask.create({
       project_id,
       title,
@@ -141,6 +145,8 @@ export async function createTask(req, res, next) {
       due_date: due_date || null,
       status: status || 'todo',
       list_id: listIdVal,
+      priority: priorityVal !== undefined ? priorityVal : undefined,
+      reminder_at: reminder_at || null,
     })
     res.status(201).json(task.get({ plain: true }))
   } catch (err) {
@@ -157,12 +163,18 @@ export async function updateTask(req, res, next) {
     const ok = await ensureMembership(task.project_id, req.user.id)
     if (!ok) return res.status(403).json({ error: 'Forbidden' })
 
-    const { title, description, assignee_id, due_date, status, list_id } = req.body
+    const { title, description, assignee_id, due_date, status, list_id, priority, reminder_at } = req.body
     if (title !== undefined) task.title = title
     if (description !== undefined) task.description = description
     if (assignee_id !== undefined) task.assignee_id = assignee_id
     if (due_date !== undefined) task.due_date = due_date
     if (status !== undefined) task.status = status
+    if (priority !== undefined) {
+      const allowed = ['low','medium','high']
+      if (!allowed.includes(priority)) return res.status(400).json({ error: 'Invalid priority' })
+      task.priority = priority
+    }
+    if (reminder_at !== undefined) task.reminder_at = reminder_at
     if (list_id !== undefined) {
       if (list_id === null) {
         task.list_id = null
