@@ -42,6 +42,9 @@ export const Project = sequelize.define('Project', {
   updatedAt: 'updated_at',
 })
 
+// Import Comment model
+import { Comment } from './comment.model.js'
+
 // Project Members (through)
 export const ProjectMember = sequelize.define('ProjectMember', {
   project_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -213,5 +216,15 @@ TaskChecklistItem.belongsTo(TaskChecklist, { foreignKey: 'checklist_id' })
 // Multiple assignees
 ProjectTask.belongsToMany(User, { through: TaskAssignee, foreignKey: 'task_id', otherKey: 'user_id', as: 'assignees' })
 User.belongsToMany(ProjectTask, { through: TaskAssignee, foreignKey: 'user_id', otherKey: 'task_id', as: 'assignedTo' })
+
+// Add association between TaskAssignee and User
+TaskAssignee.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+User.hasMany(TaskAssignee, { foreignKey: 'user_id' })
+
+// Comment associations
+ProjectTask.hasMany(Comment, { foreignKey: 'task_id', as: 'comments' })
+Comment.belongsTo(ProjectTask, { foreignKey: 'task_id' })
+User.hasMany(Comment, { foreignKey: 'user_id' })
+Comment.belongsTo(User, { foreignKey: 'user_id', as: 'author' })
 
 export default sequelize
