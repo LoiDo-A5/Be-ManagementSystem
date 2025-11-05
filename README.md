@@ -14,7 +14,7 @@ docker compose logs -f be
 ```
 3) Kiểm tra API:
 - Mở: http://localhost:3000/
-- Kết quả: `{ "message": "BeToDoList API is running" }`
+- Kết quả: `{ "message": "Be API is running" }`
 
 ## Cấu hình mặc định
 - Backend: mở cổng 3000 -> http://localhost:3000

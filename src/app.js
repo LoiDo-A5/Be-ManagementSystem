@@ -28,7 +28,7 @@ const __dirname = path.dirname(__filename)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
 
 app.get('/', (req, res) => {
-  res.json({ message: 'BeToDoList API is running' })
+  res.json({ message: 'Be API is running' })
 })
 
 app.use('/api/auth', authRoutes)

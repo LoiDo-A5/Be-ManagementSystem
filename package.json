@@ -1,5 +1,5 @@
 {
-  "name": "betodolist-api",
+  "name": "be-api",
   "version": "1.0.0",
   "description": "Express + MySQL To-Do List API with JWT authentication",
   "main": "src/server.js",
