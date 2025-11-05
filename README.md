@@ -1,77 +1,26 @@
-# BeToDoList API
+# Backend
 
-Express + MySQL To-Do List API with JWT authentication.
+## Yêu cầu
+- Docker & Docker Compose
 
-## Features
-
-- User registration and login
-- JWT auth with protected routes
-- CRUD for To-Do items per user
-- Security middlewares: helmet, cors
-- Logging via morgan
-
-## Requirements
-
-- Node.js 18+
-- MySQL 8+
-
-## Setup
-
-1. Install dependencies
-
+## Chạy bằng Docker
+1) Build và chạy dịch vụ:
 ```bash
-npm install
+docker compose up -d --build
 ```
-
-2. Create database and tables
-
+2) Xem log backend:
 ```bash
-mysql -u root -p < schema.sql
+docker compose logs -f be
 ```
+3) Kiểm tra API:
+- Mở: http://localhost:3000/
+- Kết quả: `{ "message": "BeToDoList API is running" }`
 
-3. Create `.env` from example
+## Cấu hình mặc định
+- Backend: mở cổng 3000 -> http://localhost:3000
 
-```bash
-cp .env.example .env
-# edit .env values
-```
+## Lệnh hữu ích
+- Dừng dịch vụ: `docker compose stop`
+- Khởi động lại: `docker compose restart`
+- Xóa containers + volumes: `docker compose down -v`
 
-4. Run in development
-
-```bash
-npm run dev
-```
-
-Server runs at `http://localhost:3000`
-
-## API
-
-### Auth
-
-- POST `/api/auth/register`
-  - body: `{ name, email, password }`
-  - response: `{ user, token }`
-
-- POST `/api/auth/login`
-  - body: `{ email, password }`
-  - response: `{ user, token }`
-
-- GET `/api/auth/me` (Authorization: Bearer <token>)
-  - response: `{ id, name, email }`
-
-### Todos (protected)
-
-Use header: `Authorization: Bearer <token>`
-
-- GET `/api/todos`
-- POST `/api/todos`
-  - body: `{ title, description?, due_date?, completed? }`
-- PUT `/api/todos/:id`
-  - body: any of `{ title, description, due_date, completed }`
-- DELETE `/api/todos/:id`
-
-## Notes
-
-- `due_date` expects an ISO datetime string or `YYYY-MM-DD HH:MM:SS`.
-- Passwords are hashed with bcrypt.
-- Tokens signed with `JWT_SECRET` and default expiry `7d`.
