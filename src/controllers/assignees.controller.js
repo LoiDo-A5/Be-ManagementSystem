@@ -1,4 +1,5 @@
 import { ProjectMember, ProjectTask, TaskAssignee, User } from '../models/index.js'
+import { notifyUser } from '../ws.js'
 
 // Helper function to log requests
 function logRequest(req, message) {
@@ -145,6 +146,16 @@ export async function addAssignee(req, res, next) {
     if (!isMember) return res.status(400).json({ error: 'User is not a member of this project' })
 
     await TaskAssignee.findOrCreate({ where: { task_id: taskId, user_id } })
+    // Notify the assigned user via websocket (if connected)
+    try {
+      notifyUser(user_id, 'task_assigned', {
+        task_id: taskId,
+        project_id: test.task.project_id,
+        title: (await ProjectTask.findByPk(taskId))?.title || undefined,
+        assigned_by: req.user.id,
+        timestamp: new Date().toISOString(),
+      })
+    } catch {}
     res.status(201).json({ task_id: taskId, user_id })
   } catch (err) { next(err) }
 }

@@ -1,5 +1,7 @@
 import dotenv from 'dotenv'
 import app from './app.js'
+import http from 'http'
+import { initWebsocket } from './ws.js'
 import sequelize from './models/index.js'
 
 dotenv.config()
@@ -30,7 +32,9 @@ try {
   await cleanupDuplicates()
   const alter = process.env.SEQ_ALTER === 'true'
   await sequelize.sync({ alter })
-  app.listen(PORT, () => {
+  const server = http.createServer(app)
+  initWebsocket(server)
+  server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`)
   })
 } catch (err) {

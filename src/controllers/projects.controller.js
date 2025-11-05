@@ -1,4 +1,5 @@
 import { Project, ProjectMember, ProjectTask, ProjectList, User } from '../models/index.js'
+import { notifyUser } from '../ws.js'
 
 export async function listMyProjects(req, res, next) {
   try {
@@ -94,7 +95,17 @@ export async function addMember(req, res, next) {
       member.role = role
       await member.save()
     }
-    res.status(created ? 201 : 200).json(member.get({ plain: true }))
+    const plain = member.get({ plain: true })
+    // Notify the added user
+    try {
+      notifyUser(user_id, 'project_member_added', {
+        project_id,
+        role: plain.role,
+        added_by: req.user.id,
+        timestamp: new Date().toISOString(),
+      })
+    } catch {}
+    res.status(created ? 201 : 200).json(plain)
   } catch (err) {
     next(err)
   }
@@ -246,6 +257,15 @@ export async function inviteByEmail(req, res, next) {
       member.role = role
       await member.save()
     }
+    // Notify invited user if connected
+    try {
+      notifyUser(user.id, 'project_member_added', {
+        project_id,
+        role: member.role,
+        added_by: req.user.id,
+        timestamp: new Date().toISOString(),
+      })
+    } catch {}
     res.status(created ? 201 : 200).json({ user_id: user.id, role: member.role })
   } catch (err) { next(err) }
 }
